@@ -25,15 +25,15 @@ class FCN32(FCN):
             return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
         reg_loss = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES), name='reg_loss')
-        data_loss = mu.sparse_softmax_cross_entropy(labels=labels, logits=logits)
+        data_loss = mu.sparse_softmax_cross_entropy(labels=labels['mask'], logits=logits)
         loss = tf.add_n([reg_loss, data_loss], name='total_loss')
         ##############################
         #          metrics           #
         ##############################
         with tf.name_scope('metrics'):
             with tf.name_scope('accuracy'):
-                accuracy = tf.metrics.accuracy(labels=labels, predictions=endpoints['up_output'])
-            mIoU = mu.mean_iou(labels=labels, predictions=endpoints['up_outut'], num_classes=params.n_classes+1)
+                accuracy = tf.metrics.accuracy(labels=labels['mask'], predictions=endpoints['up_output'])
+            mIoU = mu.mean_iou(labels=labels['mask'], predictions=endpoints['up_output'], num_classes=params.n_classes+1)
 
         if self.eval_mode():
             metrics = {
@@ -52,10 +52,10 @@ class FCN32(FCN):
             tf.summary.scalar('lr', params.lr)
 
             mu.add_moving_average(beta=0.99, scope='variable_moving_average')
-            solver = OptimizerWrapper(self.params['solver'],
+            solver = OptimizerWrapper(self.params.solver,
                                       params={
-                                          self.backbone.name: self.params['lr']*self.params['lrp'],
-                                          'conv6': self.params['lr'],
+                                          self.backbone.name: self.params.lr*self.params.lrp,
+                                          'conv6': self.params.lr
                                       })
             apply_gradient_op = solver.minimize(loss, global_step=self.global_step)
             tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, apply_gradient_op)

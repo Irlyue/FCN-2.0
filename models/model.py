@@ -77,7 +77,8 @@ class BackboneNetwork:
         self.name = name
         self.reg = reg
         self.ckpt_path = ckpt_path
-        self.resnet_fn = getattr(mu.load_module('nets.{}'.format(name.split('_')[0])), name)
+        resnet = '_'.join(name.split('_')[:-1])
+        self.resnet_fn = getattr(mu.load_module('nets.{}'.format(resnet)), name)
 
     def __call__(self, features, mode, params):
         with slim.arg_scope(mu.resnet_arg_scope(weight_decay=self.reg)):

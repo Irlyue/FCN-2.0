@@ -81,7 +81,7 @@ def backbone():
 
 @add_arg
 def n_classes():
-    Argument('--n_classes', default=20, type=str,
+    Argument('--n_classes', default=20, type=int,
              help='number of classes, not including the background class')
 
 

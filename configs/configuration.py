@@ -27,6 +27,10 @@ class BaseConfig:
     def __repr__(self):
         return '{}Config: {}'.format(self.name.capitalize(), json.dumps(self.state, indent=2))
 
+    def __deepcopy__(self, memodict={}):
+        cls = self.__class__
+        return cls(self.state.copy())
+
     @property
     def state(self):
         return self.__state

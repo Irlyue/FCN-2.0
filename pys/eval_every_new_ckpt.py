@@ -6,6 +6,7 @@ from experiment import Experiment
 from models.tf_hooks import EvalBestHook
 
 parser = mu.get_default_parser()
+logger = mu.get_default_logger()
 
 IGNORE_FIRST_CKPT = True
 
@@ -30,6 +31,7 @@ def generate_new_ckpt(model_dir, n_loops=100, wait_secs=60):
 
 
 def main():
+    logger.info('\n%s\n', mu.json_out(config.state))
     experiment = Experiment(config, training=False)
 
     EvalBestHook.on_start()

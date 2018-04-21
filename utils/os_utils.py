@@ -67,4 +67,4 @@ def load_json_config(path):
 
 
 def json_out(obj):
-    return json.dumps(obj)
+    return json.dumps(obj, indent=2)

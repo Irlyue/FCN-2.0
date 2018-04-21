@@ -58,10 +58,13 @@ def resnet_arg_scope(weight_decay=0.0001,
 
 def sparse_softmax_cross_entropy(_sentinel=None, labels=None, logits=None, scope='xentropy', ignore_pixel=255):
     with tf.name_scope(scope):
-        losses = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=labels, logits=logits)
+        n_classes = logits.shape[-1]
+        labels = tf.reshape(labels, shape=(-1,))
+        logits = tf.reshape(logits, shape=(-1, n_classes))
         mask = tf.not_equal(labels, ignore_pixel)
-        wanted = tf.boolean_mask(losses, mask)
-        loss = tf.reduce_mean(wanted)
+        wanted_label = tf.boolean_mask(labels, mask)
+        wanted_logit = tf.boolean_mask(logits, mask)
+        loss = tf.losses.sparse_softmax_cross_entropy(labels=wanted_label, logits=wanted_logit)
         return loss
 
 

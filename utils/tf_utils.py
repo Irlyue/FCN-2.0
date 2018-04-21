@@ -69,7 +69,7 @@ def sparse_softmax_cross_entropy(_sentinel=None, labels=None, logits=None, scope
 
 
 def add_moving_average(beta, scope='moving_average'):
-    with tf.name_scope(scope):
+    with tf.variable_scope(scope):
         variable_averages = tf.train.ExponentialMovingAverage(beta, tf.train.get_or_create_global_step())
         average_op = variable_averages.apply(tf.trainable_variables())
         tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, average_op)

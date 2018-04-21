@@ -55,7 +55,8 @@ class FCN32(FCN):
             solver = OptimizerWrapper(self.params.solver,
                                       params={
                                           self.backbone.name: self.params.lr*self.params.lrp,
-                                          'conv6': self.params.lr
+                                          'conv6': self.params.lr,
+                                          'up_conv32': self.params.lr,
                                       })
             apply_gradient_op = solver.minimize(loss, global_step=self.global_step)
             tf.add_to_collection(tf.GraphKeys.UPDATE_OPS, apply_gradient_op)

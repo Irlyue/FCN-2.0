@@ -25,7 +25,7 @@ class Experiment:
         dataset = data.split('-')[0]
         img_set = data.split('-')[1]
         task = data.split('-')[2]
-        data_gen_fn = data_gen(dataset, img_set, task, config['image_size'])
+        data_gen_fn = data_gen(dataset, img_set, task, config.image_size)
 
         #############################
         # image pre-processing      #
@@ -54,7 +54,7 @@ class Experiment:
                 hooks.extend(eval_hooks)
             result = self.estimator.evaluate(self.get_input_fn(), checkpoint_path=ckpt_path, hooks=hooks)
 
-        result['data'] = self.config['data']
+        result['data'] = self.config.data
         logger.info('Done in %.fs', timer.eclipsed)
         logger.info('\n%s%s%s\n', '*'*10, result, '*'*10)
 

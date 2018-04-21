@@ -60,7 +60,7 @@ class Experiment:
 
     @property
     def estimator(self):
-        if self.__estimator is not None:
+        if self.__estimator is None:
             config = self.config
             backbone = BackboneNetwork(config.backbone, reg=config.reg, ckpt_path=config.ckpt_for_backbone)
             fcn_fn = FCN32(backbone)

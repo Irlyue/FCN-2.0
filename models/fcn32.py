@@ -41,7 +41,8 @@ class FCN32(FCN):
                 'mIoU': mIoU
             }
             eval_hooks = [EvalHook(), EvalBestHook(metrics['mIoU'][0], model_dir=params.model_dir)]
-            return tf.estimator.EstimatorSpec(mode, loss=loss, eval_metric_ops=metrics, evaluation_hooks=eval_hooks)
+            return tf.estimator.EstimatorSpec(mode, loss=data_loss, eval_metric_ops=metrics,
+                                              evaluation_hooks=eval_hooks)
 
         if self.train_mode():
             ##############################
@@ -50,6 +51,8 @@ class FCN32(FCN):
             tf.summary.scalar('loss/data_loss', data_loss)
             tf.summary.scalar('loss/reg_loss', reg_loss)
             tf.summary.scalar('lr', params.lr)
+            tf.summary.scalar('metrics/accuracy', accuracy[1])
+            tf.summary.scalar('metrics/mIoU', mIoU[1])
 
             mu.add_moving_average(beta=0.99, scope='variable_moving_average')
             solver = OptimizerWrapper(self.params.solver,

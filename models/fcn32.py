@@ -52,7 +52,7 @@ class FCN32(FCN):
             tf.summary.scalar('loss/reg_loss', reg_loss)
             tf.summary.scalar('lr', params.lr)
             tf.summary.scalar('metrics/accuracy', accuracy[1])
-            tf.summary.scalar('metrics/mIoU', mIoU[1])
+            # tf.summary.scalar('metrics/mIoU', mIoU[1])
 
             mu.add_moving_average(beta=0.99, scope='variable_moving_average')
             solver = OptimizerWrapper(self.params.solver,

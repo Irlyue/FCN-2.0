@@ -62,7 +62,8 @@ class Experiment:
     def estimator(self):
         if self.__estimator is None:
             config = self.config
-            backbone = BackboneNetwork(config.backbone, reg=config.reg, ckpt_path=config.ckpt_for_backbone)
+            backbone = BackboneNetwork(config.backbone, reg=config.reg, ckpt_path=config.ckpt_for_backbone,
+                                       output_stride=config.backbone_stride)
             fcn_fn = FCN32(backbone)
             run_config = mu.load_run_config()
             self.__estimator = tf.estimator.Estimator(fcn_fn, model_dir=config.model_dir, params=config, config=run_config)

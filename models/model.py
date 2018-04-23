@@ -73,10 +73,11 @@ class InputFunction:
 
 
 class BackboneNetwork:
-    def __init__(self, name='resnet_v1_101', reg=1e-4, ckpt_path=None):
+    def __init__(self, name='resnet_v1_101', reg=1e-4, ckpt_path=None, output_stride=32):
         self.name = name
         self.reg = reg
         self.ckpt_path = ckpt_path
+        self.output_stride = output_stride
         resnet = '_'.join(name.split('_')[:-1])
         self.resnet_fn = getattr(mu.load_module('nets.{}'.format(resnet)), name)
 
@@ -84,6 +85,7 @@ class BackboneNetwork:
         with slim.arg_scope(mu.resnet_arg_scope(weight_decay=self.reg)):
             with slim.arg_scope([slim.batch_norm], is_training=(mode == tf.estimator.ModeKeys.TRAIN)):
                 conv5, _ = self.resnet_fn(features,
+                                          output_stride=self.output_stride,
                                           num_classes=None,
                                           global_pool=False)
         init_fn = None

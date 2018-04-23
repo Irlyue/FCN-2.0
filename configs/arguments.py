@@ -103,6 +103,12 @@ def gpu_id():
              help='specify which GPU to use, choose from{0, 1, 2}')
 
 
+@add_arg
+def backbone_stride():
+    Argument('--backbone_stride', default=32, type=int,
+             help='the output stride out the ResNet backbone network')
+
+
 def get_default_parser():
     Argument.set_parser(argparse.ArgumentParser())
     for cls in ARGUMENTS:

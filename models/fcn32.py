@@ -85,8 +85,8 @@ class FCN32(FCN):
 
         up32_conv = slim.conv2d_transpose(conv6,
                                           num_outputs=params.n_classes+1,
-                                          kernel_size=64,
-                                          stride=32,
+                                          kernel_size=params.backbone_stride*2,
+                                          stride=params.backbone_stride,
                                           scope='up_conv32',
                                           activation_fn=None)
 

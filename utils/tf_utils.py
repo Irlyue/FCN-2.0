@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
@@ -56,6 +57,23 @@ def resnet_arg_scope(weight_decay=0.0001,
                 return arg_sc
 
 
+def vgg_arg_scope(weight_decay=0.0005):
+    """Defines the VGG arg scope.
+
+    Args:
+      weight_decay: The l2 regularization coefficient.
+
+    Returns:
+      An arg_scope.
+    """
+    with slim.arg_scope([slim.conv2d, slim.fully_connected],
+                        activation_fn=tf.nn.relu,
+                        weights_regularizer=slim.l2_regularizer(weight_decay),
+                        biases_initializer=tf.zeros_initializer()):
+        with slim.arg_scope([slim.conv2d], padding='SAME') as arg_sc:
+            return arg_sc
+
+
 def sparse_softmax_cross_entropy(_sentinel=None, labels=None, logits=None, scope='xentropy', ignore_pixel=255):
     with tf.name_scope(scope):
         n_classes = logits.shape[-1]
@@ -105,3 +123,40 @@ def mean_iou(labels, predictions, num_classes, ignore_pixel=255, scope='miou'):
         return tf.metrics.mean_iou(labels=labels,
                                    predictions=predictions,
                                    num_classes=num_classes)
+
+
+def bilinear_upsample_weights(factor, number_of_classes):
+    """
+    Create weights matrix for transposed convolution with bilinear filter
+    initialization.
+    """
+
+    def get_kernel_size(factor):
+        return 2 * factor - factor % 2
+
+    def upsample_filt(size):
+        """
+        Make a 2D bilinear kernel suitable for upsampling of the given (h, w) size.
+        """
+        factor = (size + 1) // 2
+        if size % 2 == 1:
+            center = factor - 1
+        else:
+            center = factor - 0.5
+        og = np.ogrid[:size, :size]
+        return (1 - abs(og[0] - center) / factor) * \
+               (1 - abs(og[1] - center) / factor)
+
+    filter_size = get_kernel_size(factor)
+
+    weights = np.zeros((filter_size,
+                        filter_size,
+                        number_of_classes,
+                        number_of_classes), dtype=np.float32)
+
+    upsample_kernel = upsample_filt(filter_size)
+
+    for i in range(number_of_classes):
+        weights[:, :, i, i] = upsample_kernel
+
+    return weights

@@ -11,6 +11,16 @@ def default_prep(image, is_training):
     return mean_image_subtraction(image, [_R_MEAN, _G_MEAN, _B_MEAN])
 
 
+def default_seg_prep(image, label, training):
+    if training:
+        stacked = tf.stack([image, label], axis=-1)
+        stacked = tf.image. random_flip_left_right(stacked)
+        image = stacked[:, :, :3]
+        label = stacked[:, :, 3:]
+    image = mean_image_subtraction(image, [_R_MEAN, _G_MEAN, _B_MEAN])
+    return image, label
+
+
 def mean_image_subtraction(image, means):
     """Subtracts the given means from each image channel.
 

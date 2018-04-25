@@ -1,10 +1,10 @@
 import my_utils as mu
 import tensorflow as tf
 
-from models.model import BackboneNetwork, InputFunction
+from models.model import BackboneNetwork, InputFunction, VGGBackboneNetwork, SegInputFunction
 from inputs.data_gen import data_gen
-from preprocessing.prep import default_prep
-from models.fcn32 import FCN32
+from preprocessing.prep import default_prep, default_seg_prep
+from models.fcn32 import FCN32, VGGFCN32
 from models.tf_hooks import RestoreMovingAverageHook
 
 logger = mu.get_default_logger()
@@ -16,31 +16,11 @@ class Experiment:
         self.training = training
         self.__estimator = None
 
-    def get_input_fn(self, data=None):
+    def get_input_fn(self):
         config = self.config
-        data = config.data if data is None else data
-        #############################
-        # data generator function   #
-        #############################
-        dataset = data.split('-')[0]
-        img_set = data.split('-')[1]
-        task = data.split('-')[2]
-        data_gen_fn = data_gen(dataset, img_set, task, config.image_size)
-
-        #############################
-        # image pre-processing      #
-        #############################
-        image_prep_fn = lambda x: default_prep(x, self.training)
-
-        #############################
-        # training input function   #
-        #############################
-        input_fn = InputFunction(data_gen_fn,
-                                 n_classes=config.n_classes,
-                                 batch_size=config.batch_size,
-                                 n_epochs=config.n_epochs,
-                                 prep_fn=image_prep_fn,
-                                 shuffle=self.training)
+        image_prep_fn = default_seg_prep
+        input_fn = SegInputFunction(config.data, self.training, batch_size=config.batch_size,
+                                    n_epochs=config.n_epochs, prep_fn=image_prep_fn)
         return input_fn
 
     def train(self, input_fn=None):
@@ -62,9 +42,8 @@ class Experiment:
     def estimator(self):
         if self.__estimator is None:
             config = self.config
-            backbone = BackboneNetwork(config.backbone, reg=config.reg, ckpt_path=config.ckpt_for_backbone,
-                                       output_stride=config.backbone_stride)
-            fcn_fn = FCN32(backbone)
+            backbone = VGGBackboneNetwork(reg=config.reg, ckpt_path=config.ckpt_for_backbone)
+            fcn_fn = VGGFCN32(backbone)
             run_config = mu.load_run_config()
             self.__estimator = tf.estimator.Estimator(fcn_fn, model_dir=config.model_dir, params=config, config=run_config)
         return self.__estimator

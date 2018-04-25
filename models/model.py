@@ -24,15 +24,15 @@ class FCN:
                 return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
             reg_loss = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES), name='reg_loss')
-            data_loss = mu.sparse_softmax_cross_entropy(labels=labels['mask'], logits=logits)
+            data_loss = mu.sparse_softmax_cross_entropy(labels=labels, logits=logits)
             loss = tf.add_n([reg_loss, data_loss], name='total_loss')
             ##############################
             #          metrics           #
             ##############################
             with tf.name_scope('metrics'):
                 with tf.name_scope('accuracy'):
-                    accuracy = tf.metrics.accuracy(labels=labels['mask'], predictions=endpoints['up_output'])
-                mIoU = mu.mean_iou(labels=labels['mask'], predictions=endpoints['up_output'], num_classes=params.n_classes+1)
+                    accuracy = tf.metrics.accuracy(labels=labels, predictions=endpoints['up_output'])
+                mIoU = mu.mean_iou(labels=labels, predictions=endpoints['up_output'], num_classes=params.n_classes+1)
 
             if self.eval_mode():
                 metrics = {
@@ -219,6 +219,7 @@ class VGGBackboneNetwork:
         init_fn = None
         if self.ckpt_path is not None:
             var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
+            var_list = [item for item in var_list if 'fc8' not in item.name]
             init_fn = assign_from_checkpoint_fn(self.ckpt_path, var_list, ignore_missing_vars=True)
         hooks = [RestoreHook(init_fn)]
         return logits, hooks

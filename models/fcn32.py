@@ -45,9 +45,6 @@ class VGGFCN32(FCN):
     def __init__(self, backbone):
         super().__init__(backbone, name='VGGFCN32')
 
-    def __call__(self, features, labels, mode, params):
-        super().__call__(features, labels, mode, params)
-
     def get_solver(self):
         return tf.train.AdamOptimizer(learning_rate=self.params.lr)
 
@@ -55,13 +52,16 @@ class VGGFCN32(FCN):
         params = self.params
         endpoints = OrderedDict()
         logits, backbone_hooks = self.backbone(self.features, self.mode, self.params)
+        output = tf.argmax(logits, axis=-1)
 
         stride = 32
         with tf.variable_scope('up_conv%d' % stride):
             logits_shape = tf.shape(logits)
-            up_logits_shape = [logits_shape[0], logits_shape[1]*stride, logits_shape[2]*stride, logits_shape[3]]
+            up_logits_shape = tf.stack([logits_shape[0], logits_shape[1]*stride, logits_shape[2]*stride, logits_shape[3]])
             up_filter = tf.constant(mu.bilinear_upsample_weights(stride, params.n_classes+1), dtype=tf.float32)
             up_logits = tf.nn.conv2d_transpose(logits, up_filter, output_shape=up_logits_shape,
                                                strides=[1, stride, stride, 1])
+        up_output = tf.argmax(up_logits, axis=-1)
+        endpoints.update(output=output, up_output=up_output)
         return up_logits, endpoints, backbone_hooks
 

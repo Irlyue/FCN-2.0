@@ -109,6 +109,12 @@ def backbone_stride():
              help='the output stride out the ResNet backbone network')
 
 
+@add_arg
+def keep_prob():
+    Argument('--keep_prob', default=0.5, type=float,
+             help='parameter for dropout layer')
+
+
 def get_default_parser():
     Argument.set_parser(argparse.ArgumentParser())
     for cls in ARGUMENTS:

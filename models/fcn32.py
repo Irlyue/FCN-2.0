@@ -75,6 +75,8 @@ class FCN32(FCN):
         endpoints = OrderedDict()
         conv5, backbone_hooks = self.backbone(self.features, self.mode, self.params)
 
+        conv5 = slim.dropout(conv5, keep_prob=params.keep_prob, is_training=self.train_mode())
+
         conv6 = slim.conv2d(conv5,
                             num_outputs=params.n_classes+1,
                             kernel_size=1,
@@ -83,12 +85,13 @@ class FCN32(FCN):
 
         output = tf.argmax(conv6, axis=-1, name='output')
 
-        up32_conv = slim.conv2d_transpose(conv6,
-                                          num_outputs=params.n_classes+1,
-                                          kernel_size=params.backbone_stride*2,
-                                          stride=params.backbone_stride,
-                                          scope='up_conv32',
-                                          activation_fn=None)
+        # up32_conv = slim.conv2d_transpose(conv6,
+        #                                   num_outputs=params.n_classes+1,
+        #                                   kernel_size=params.backbone_stride*2,
+        #                                   stride=params.backbone_stride,
+        #                                   scope='up_conv%d' % params.backbone_stride,
+        #                                   activation_fn=None)
+        up32_conv = tf.image.resize_images(conv6, params.image_size)
 
         up_output = tf.argmax(up32_conv, axis=-1, name='up_output')
         endpoints.update(output=output, up_output=up_output)

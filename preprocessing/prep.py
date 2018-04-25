@@ -13,10 +13,12 @@ def default_prep(image, is_training):
 
 def default_seg_prep(image, label, training):
     if training:
+        label = tf.cast(label, tf.float32)
         stacked = tf.stack([image, label], axis=-1)
         stacked = tf.image. random_flip_left_right(stacked)
         image = stacked[:, :, :3]
         label = stacked[:, :, 3:]
+        label = tf.cast(label, tf.int32)
     image = mean_image_subtraction(image, [_R_MEAN, _G_MEAN, _B_MEAN])
     return image, label
 

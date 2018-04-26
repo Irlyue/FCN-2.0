@@ -1,10 +1,10 @@
 import my_utils as mu
 import tensorflow as tf
 
-from models.model import BackboneNetwork, InputFunction, VGGBackboneNetwork, SegInputFunction
+from models.model import ResNetBackboneNetwork, InputFunction, VGGBackboneNetwork, SegInputFunction
 from inputs.data_gen import data_gen
 from preprocessing.prep import default_prep, default_seg_prep
-from models.fcn32 import FCN32, VGGFCN32
+from models.fcn32 import ResNetFCN32, VGGFCN32
 from models.tf_hooks import RestoreMovingAverageHook
 
 logger = mu.get_default_logger()
@@ -42,8 +42,13 @@ class Experiment:
     def estimator(self):
         if self.__estimator is None:
             config = self.config
-            backbone = VGGBackboneNetwork(reg=config.reg, ckpt_path=config.ckpt_for_backbone)
-            fcn_fn = VGGFCN32(backbone)
+            # backbone = VGGBackboneNetwork(reg=config.reg, ckpt_path=config.ckpt_for_backbone)
+            # fcn_fn = VGGFCN32(backbone)
+            backbone = ResNetBackboneNetwork(name=config.backbone,
+                                             reg=config.reg,
+                                             ckpt_path=config.ckpt_for_backbone,
+                                             output_stride=config.backbone_stride)
+            fcn_fn = ResNetFCN32(backbone)
             run_config = mu.load_run_config()
             self.__estimator = tf.estimator.Estimator(fcn_fn, model_dir=config.model_dir, params=config, config=run_config)
         return self.__estimator

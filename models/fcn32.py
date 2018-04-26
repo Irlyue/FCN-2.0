@@ -75,7 +75,7 @@ class ResNetFCN32(FCN):
         endpoints = OrderedDict()
         conv5, backbone_hooks = self.backbone(self.features, self.mode, self.params)
 
-        # conv5 = slim.dropout(conv5, keep_prob=params.keep_prob, is_training=self.train_mode())
+        conv5 = slim.dropout(conv5, keep_prob=params.keep_prob, is_training=self.train_mode())
 
         logits = slim.conv2d(conv5,
                              num_outputs=params.n_classes+1,

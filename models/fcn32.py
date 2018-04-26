@@ -5,6 +5,7 @@ import tensorflow.contrib.slim as slim
 from .model import FCN
 from collections import OrderedDict
 from .tf_hooks import EvalBestHook, EvalHook
+from .model import OptimizerWrapper
 
 
 class ResNetFCN32(FCN):
@@ -12,7 +13,12 @@ class ResNetFCN32(FCN):
         super().__init__(backbone, 'fcn32')
 
     def get_solver(self):
-        return tf.train.AdamOptimizer(learning_rate=self.params.lr)
+        solver = OptimizerWrapper(self.params.solver,
+                                  params={
+                                      self.backbone.name: self.params.lr*self.params.lrp,
+                                      'logits': self.params.lr
+                                  })
+        return solver
 
     def __call__(self, features, labels, mode, params):
         with tf.device('/GPU:{}'.format(params.gpu_id)):

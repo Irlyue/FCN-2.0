@@ -163,6 +163,8 @@ def bilinear_upsample_weights(factor, number_of_classes):
 
 
 def resize_labels(x, size):
+    if type(size) == int:
+        size = (size, size)
     with tf.name_scope('resize_labels'):
         if len(x.get_shape().as_list()) == 3:
             x = tf.expand_dims(x, axis=-1)

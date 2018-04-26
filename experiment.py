@@ -10,6 +10,14 @@ from models.tf_hooks import RestoreMovingAverageHook
 logger = mu.get_default_logger()
 
 
+def reshape_and_prep(image, label, training, image_size):
+    image = tf.image.resize_images(image, image_size)
+    label = tf.image.resize_images(label, image_size, method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    image, label = default_seg_prep(image, label, training)
+    label = tf.squeeze(label)
+    return image, label
+
+
 class Experiment:
     def __init__(self, config, training):
         self.config = config
@@ -18,9 +26,10 @@ class Experiment:
 
     def get_input_fn(self):
         config = self.config
-        image_prep_fn = default_seg_prep
+        image_prep_fn = lambda image, label, training: reshape_and_prep(image, label, training, config.image_size)
         input_fn = SegInputFunction(config.data, self.training, batch_size=config.batch_size,
-                                    n_epochs=config.n_epochs, prep_fn=image_prep_fn)
+                                    n_epochs=config.n_epochs,
+                                    prep_fn=image_prep_fn)
         return input_fn
 
     def train(self, input_fn=None):

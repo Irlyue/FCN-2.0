@@ -34,8 +34,8 @@ def resnet_arg_scope(weight_decay=0.0001,
         'decay': batch_norm_decay,
         'epsilon': batch_norm_epsilon,
         'scale': batch_norm_scale,
-        # 'updates_collections': tf.GraphKeys.UPDATE_OPS,
-        'updates_collections': None,
+        'updates_collections': tf.GraphKeys.UPDATE_OPS,
+        # 'updates_collections': None,
         'fused': None,  # Use fused batch norm if possible.
     }
 
@@ -76,7 +76,7 @@ def vgg_arg_scope(weight_decay=0.0005):
 
 def sparse_softmax_cross_entropy(_sentinel=None, labels=None, logits=None, scope='xentropy', ignore_pixel=255):
     with tf.name_scope(scope):
-        n_classes = logits.shape[-1]
+        n_classes = tf.shape(logits)[-1]
         labels = tf.reshape(labels, shape=(-1,))
         logits = tf.reshape(logits, shape=(-1, n_classes))
         mask = tf.not_equal(labels, ignore_pixel)
@@ -160,3 +160,12 @@ def bilinear_upsample_weights(factor, number_of_classes):
         weights[:, :, i, i] = upsample_kernel
 
     return weights
+
+
+def resize_labels(x, size):
+    with tf.name_scope('resize_labels'):
+        if len(x.get_shape().as_list()) == 3:
+            x = tf.expand_dims(x, axis=-1)
+        x = tf.image.resize_nearest_neighbor(x, size)
+        x = tf.squeeze(x)
+        return x

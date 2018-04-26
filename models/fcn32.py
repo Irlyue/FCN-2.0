@@ -29,7 +29,7 @@ class ResNetFCN32(FCN):
             #          losses            #
             ##############################
             reg_loss = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES), name='reg_loss')
-            resized_labels = mu.resize_labels(labels, params.image_size // params.backbone_stride)
+            resized_labels = mu.resize_labels(labels, params.image_size[0] // params.backbone_stride)
             data_loss = mu.sparse_softmax_cross_entropy(labels=resized_labels,
                                                         logits=endpoints['logits'])
             loss = tf.add_n([reg_loss, data_loss], name='total_loss')
@@ -87,7 +87,7 @@ class ResNetFCN32(FCN):
 
         up_logits = tf.image.resize_bilinear(logits, params.image_size)
         up_output = tf.argmax(up_logits, axis=-1, name='up_output')
-        endpoints.update(output=output, up_output=up_output, )
+        endpoints.update(output=output, up_output=up_output, logits=logits, up_logits=up_logits)
         return up_logits, endpoints, backbone_hooks
 
 

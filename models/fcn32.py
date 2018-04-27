@@ -85,9 +85,11 @@ class ResNetFCN32(FCN):
 
         logits = slim.conv2d(conv5,
                              num_outputs=params.n_classes+1,
-                             kernel_size=1,
+                             kernel_size=3,
                              scope='logits',
-                             activation_fn=None)
+                             activation_fn=None,
+                             rate=params.rate,
+                             padding='SAME')
 
         output = tf.argmax(logits, axis=-1, name='output')
 

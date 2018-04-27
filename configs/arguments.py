@@ -115,6 +115,12 @@ def keep_prob():
              help='parameter for dropout layer')
 
 
+@add_arg
+def rate():
+    Argument('--rate', default=12, type=float,
+             help='parameter for dropout layer')
+
+
 def get_default_parser():
     Argument.set_parser(argparse.ArgumentParser())
     for cls in ARGUMENTS:

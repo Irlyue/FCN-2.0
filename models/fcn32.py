@@ -77,19 +77,25 @@ class ResNetFCN32(FCN):
                 return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op, training_hooks=train_hooks)
 
     def inference(self):
+        def _conv2d(inp, r):
+            return slim.conv2d(inp,
+                               num_outputs=params.n_classes+1,
+                               kernel_size=1 if r == 1 else 3,
+                               scope='aspp_{}'.format(r),
+                               activation_fn=None,
+                               rate=r,
+                               padding='SAME')
+
         params = self.params
         endpoints = OrderedDict()
         conv5, backbone_hooks = self.backbone(self.features, self.mode, self.params)
 
         conv5 = slim.dropout(conv5, keep_prob=params.keep_prob, is_training=self.train_mode())
 
-        logits = slim.conv2d(conv5,
-                             num_outputs=params.n_classes+1,
-                             kernel_size=params.kernel_size,
-                             scope='logits',
-                             activation_fn=None,
-                             rate=params.rate,
-                             padding='SAME')
+        paths = []
+        for rate in params.aspp_rates:
+            paths.append(_conv2d(conv5, rate))
+        logits = tf.add_n(paths)
 
         output = tf.argmax(logits, axis=-1, name='output')
 

@@ -14,6 +14,7 @@ IGNORE_FIRST_CKPT = True
 
 def generate_new_ckpt(model_dir, n_loops=None, wait_secs=60):
     old_ckpts = set()
+    n_loops = n_loops or int(1e8)
     for _ in itertools.repeat(None, times=n_loops):
         ckpt_state = tf.train.get_checkpoint_state(model_dir)
         all_ckpts = set(ckpt_state.all_model_checkpoint_paths) if ckpt_state else set()

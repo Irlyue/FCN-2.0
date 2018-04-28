@@ -117,8 +117,14 @@ def keep_prob():
 
 @add_arg
 def rate():
-    Argument('--rate', default=12, type=float,
+    Argument('--rate', default=12, type=int,
              help='parameter for dropout layer')
+
+
+@add_arg
+def kernel_size():
+    Argument('--kernel_size', default=1, type=int,
+             help='kernel size of the last conv layer')
 
 
 def get_default_parser():

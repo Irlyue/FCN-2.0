@@ -85,7 +85,7 @@ class ResNetFCN32(FCN):
 
         logits = slim.conv2d(conv5,
                              num_outputs=params.n_classes+1,
-                             kernel_size=3,
+                             kernel_size=params.kernel_size,
                              scope='logits',
                              activation_fn=None,
                              rate=params.rate,

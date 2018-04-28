@@ -117,7 +117,7 @@ def keep_prob():
 
 @add_arg
 def aspp_rates():
-    Argument('--aspprates', default=[1, 6, 12, 18, 24], type=int, nargs='*',
+    Argument('--aspp_rates', default=[1, 6, 12, 18, 24], type=int, nargs='*',
              help='parameter for dropout layer')
 
 

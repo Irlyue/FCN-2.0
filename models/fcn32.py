@@ -16,7 +16,7 @@ class ResNetFCN32(FCN):
         solver = OptimizerWrapper(self.params.solver,
                                   params={
                                       self.backbone.name: self.params.lr*self.params.lrp,
-                                      'logits': self.params.lr
+                                      'aspp': self.params.lr
                                   })
         return solver
 
@@ -92,10 +92,11 @@ class ResNetFCN32(FCN):
 
         conv5 = slim.dropout(conv5, keep_prob=params.keep_prob, is_training=self.train_mode())
 
-        paths = []
-        for rate in params.aspp_rates:
-            paths.append(_conv2d(conv5, rate))
-        logits = tf.add_n(paths)
+        with tf.variable_scope('aspp'):
+            paths = []
+            for rate in params.aspp_rates:
+                paths.append(_conv2d(conv5, rate))
+            logits = tf.add_n(paths)
 
         output = tf.argmax(logits, axis=-1, name='output')
 

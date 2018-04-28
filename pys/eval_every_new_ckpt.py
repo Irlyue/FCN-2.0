@@ -1,4 +1,5 @@
 import time
+import itertools
 import my_utils as mu
 import tensorflow as tf
 
@@ -11,9 +12,9 @@ logger = mu.get_default_logger()
 IGNORE_FIRST_CKPT = True
 
 
-def generate_new_ckpt(model_dir, n_loops=100, wait_secs=60):
+def generate_new_ckpt(model_dir, n_loops=None, wait_secs=60):
     old_ckpts = set()
-    for i in range(n_loops):
+    for _ in itertools.repeat(None, times=n_loops):
         ckpt_state = tf.train.get_checkpoint_state(model_dir)
         all_ckpts = set(ckpt_state.all_model_checkpoint_paths) if ckpt_state else set()
         new_ckpts = all_ckpts - old_ckpts
@@ -22,7 +23,7 @@ def generate_new_ckpt(model_dir, n_loops=100, wait_secs=60):
             try:
                 time.sleep(wait_secs)
             except KeyboardInterrupt:
-                ans = input('You\'re sure want to exit?(y|n)')
+                ans = input('Sure you wanna to exit?(y|n)')
                 if ans.startswith('y'):
                     break
         else:
@@ -35,7 +36,7 @@ def main():
     experiment = Experiment(config, training=False)
 
     EvalBestHook.on_start()
-    for i, ckpt in enumerate(generate_new_ckpt(config.model_dir)):
+    for i, ckpt in enumerate(generate_new_ckpt(config.model_dir, wait_secs=300)):
         if i == 0 and IGNORE_FIRST_CKPT:
             continue
         experiment.eval(ckpt)

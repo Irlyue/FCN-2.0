@@ -76,13 +76,8 @@ def vgg_arg_scope(weight_decay=0.0005):
 
 def sparse_softmax_cross_entropy(_sentinel=None, labels=None, logits=None, scope='xentropy', ignore_pixel=255):
     with tf.name_scope(scope):
-        n_classes = tf.shape(logits)[-1]
-        labels = tf.reshape(labels, shape=(-1,))
-        logits = tf.reshape(logits, shape=(-1, n_classes))
-        mask = tf.not_equal(labels, ignore_pixel)
-        wanted_label = tf.boolean_mask(labels, mask)
-        wanted_logit = tf.boolean_mask(logits, mask)
-        loss = tf.losses.sparse_softmax_cross_entropy(labels=wanted_label, logits=wanted_logit)
+        weights = tf.cast(tf.not_equal(labels, ignore_pixel), dtype=tf.float32)
+        loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=logits, weights=weights)
         return loss
 
 

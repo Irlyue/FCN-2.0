@@ -190,7 +190,6 @@ class ResNetBackboneNetwork:
     def __call__(self, features, mode, params):
         with slim.arg_scope(mu.resnet_arg_scope(weight_decay=self.reg)):
             conv5, _ = self.resnet_fn(features,
-                                      is_training=(mode == tf.estimator.ModeKeys.TRAIN),
                                       output_stride=self.output_stride,
                                       num_classes=None,
                                       global_pool=False)

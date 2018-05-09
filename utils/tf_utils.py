@@ -86,6 +86,20 @@ def sparse_softmax_cross_entropy(_sentinel=None, labels=None, logits=None, scope
         return loss
 
 
+def sparse_sigmoid_cross_entropy(_sentinel=None, labels=None,
+                                 logits=None, scope='sigmoid_entropy', ignore_pixel=255):
+    with tf.name_scope(scope):
+        n_classes = tf.shape(logits)[-1]
+        labels = tf.reshape(labels, shape=(-1,))
+        logits = tf.reshape(logits, shape=(-1, n_classes))
+        mask = tf.not_equal(labels, ignore_pixel)
+        wanted_label = tf.boolean_mask(labels, mask)
+        wanted_label = tf.one_hot(wanted_label, logits.shape[-1])
+        wanted_logit = tf.boolean_mask(logits, mask)
+        loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=wanted_label, logits=wanted_logit)
+        return loss
+
+
 def add_moving_average(beta, scope='moving_average'):
     with tf.variable_scope(scope):
         variable_averages = tf.train.ExponentialMovingAverage(beta, tf.train.get_or_create_global_step())

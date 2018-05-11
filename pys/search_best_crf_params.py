@@ -8,6 +8,7 @@ from experiment import Experiment
 from models.model import SegInputFunction
 from scipy.misc import imresize
 from concurrent import futures
+from itertools import repeat
 
 logger = mu.get_default_logger()
 parser = argparse.ArgumentParser()
@@ -15,7 +16,7 @@ parser.add_argument('--n_examples', type=int, default=100,
                     help='number of examples to do the grid search')
 parser.add_argument('--data', default='/tmp/voc2012_seg_val.tfrecord', type=str,
                     help='tfrecord path for prediction')
-parser.add_argument('--n_workers', default=20, type=int,
+parser.add_argument('--n_workers', default=5, type=int,
                     help='number of processes to use')
 
 
@@ -43,15 +44,31 @@ def crf_config_gen():
 def grid_search_for_crf():
     data = generate_pairs(FLAGS.data, FLAGS.n_examples)
     best = {'mIoU': -1}
-    with futures.ProcessPoolExecutor(max_workers=10) as pool:
-        for mIoU, config in pool.map(lambda x: (eval_crf_config(data, x), x), crf_config_gen()):
-            if mIoU > best['mIoU']:
-                best.update(config=config, mIoU=mIoU)
-                logger.info('Current Best mIoU=%.3f\nconfig=%s', best['mIoU'], best['config'])
+    for mIoU, config in map(eval_crf_config, repeat(data), crf_config_gen()):
+        if mIoU > best['mIoU']:
+            best.update(config=config, mIoU=mIoU)
+            logger.info('Current Best mIoU=%.3f\nconfig=%s', best['mIoU'], best['config'])
     logger.info('Best mIoU=%.3f\nconfig=%s', best['mIoU'], best['config'])
 
 
 def generate_pairs(tfrecord_path, n_examples):
+    class Resizer:
+        def __init__(self):
+            pass
+                                        
+        def __enter__(self):
+            self.sess = tf.Session(config=tf.ConfigProto(device_count={'GPU': 0}))
+            self.input_ph = tf.placeholder(tf.float32, shape=[None, None, None])
+            self.size_ph = tf.placeholder(tf.int32, shape=[2])
+            self.resized = tf.image.resize_images(self.input_ph, self.size_ph)
+            return self
+                                                                                                            
+        def __call__(self, x, size):
+            return self.sess.run(self.resized, feed_dict={self.input_ph: x, self.size_ph: size})
+
+        def __exit__(self, *args):
+            self.sess.close()
+    
     def input_batch():
         with tf.Graph().as_default():
             input_fn = SegInputFunction(tfrecord_path, training=False, batch_size=1, n_epochs=1)
@@ -63,41 +80,46 @@ def generate_pairs(tfrecord_path, n_examples):
     parser = mu.get_default_parser()
     args = parser.parse_args('').__dict__.copy()
     args.update(image_size=(384, 384), aspp_rates=[12], keep_prob=1.0,
-                backbone_stride=8, kernel_size=3, data=tfrecord_path)
+                backbone_stride=8, kernel_size=3, data=tfrecord_path,
+                gpu_id=0)
     config = mu.Config(args)
     exp = Experiment(config, training=False)
     results = []
-    for i, (inps, ends) in enumerate(zip(input_batch(), exp.predict())):
-        if i >= n_examples:
-            break
-        image = inps[0].astype('uint8')[0]
-        mask = np.squeeze(inps[1][0]).astype('int64')
-        probs = ends['up_probs']
-        probs = imresize(probs, mask.shape, mode='F')
-        results.append((image, mask, probs))
+    with Resizer() as resizer:
+        for i, (inps, ends) in enumerate(zip(input_batch(), exp.predict())):
+            if i >= n_examples:
+                break
+            image = inps[0].astype('uint8')[0]
+            mask = np.squeeze(inps[1][0]).astype('int64')
+            probs = ends['up_probs']
+            probs = resizer(probs, mask.shape)
+            results.append((image, mask, probs))
     logger.info('Done generation!')
     return results
 
 
-def eval_crf_config(data, config):
-    with tf.Graph().as_default():
-        data = tf.data.Dataset.from_generator(lambda: crf_inference_config(data, config),
-                                              output_types=(tf.int64, tf.int64),
-                                              output_shapes=(tf.TensorShape([None, None]),
-                                                             tf.TensorShape([None, None])))
-        batch_gt, batch_pred = data.repeat(1).batch(1).make_one_shot_iterator().get_next()
-        mIoU, update_op = mu.mean_iou(labels=batch_gt,
-                                      predictions=batch_pred,
-                                      num_classes=21)
-        with tf.Session(config=tf.ConfigProto(device_count={'GPU': 0})) as sess:
-            sess.run(tf.local_variables_initializer())
-            while True:
-                try:
-                    sess.run(update_op)
-                except tf.errors.OutOfRangeError:
-                    logger.info('Done!')
-                    break
-            return sess.run(mIoU)
+def eval_crf_config(data_in, config):
+    with mu.Timer() as timer:
+        with tf.Graph().as_default():
+            data = tf.data.Dataset.from_generator(lambda: crf_inference_config(data_in, config),
+                                                  output_types=(tf.int64, tf.int64),
+                                                  output_shapes=(tf.TensorShape([None, None]),
+                                                                 tf.TensorShape([None, None])))
+            batch_gt, batch_pred = data.repeat(1).prefetch(FLAGS.n_workers).batch(1).make_one_shot_iterator().get_next()
+            mIoU, update_op = mu.mean_iou(labels=batch_gt,
+                                          predictions=batch_pred,
+                                          num_classes=21)
+            with tf.Session(config=tf.ConfigProto(device_count={'GPU': 0})) as sess:
+                sess.run(tf.local_variables_initializer())
+                while True:
+                    try:
+                        sess.run(update_op)
+                    except tf.errors.OutOfRangeError:
+                        logger.info('Done!')
+                        break
+                miou = sess.run(mIoU)
+    print('******************************************', timer.eclipsed)
+    return miou, config
 
 
 def crf_inference_config(data, config):
@@ -111,10 +133,14 @@ def crf_inference_config(data, config):
     :param config:
     :return:
     """
-    for image, mask, prob in data:
-        mask_pred = crf_post_process(image, prob, config)
-        yield mask, mask_pred
+    with futures.ProcessPoolExecutor(FLAGS.n_workers) as pool:
+        images = (item[0] for item in data)
+        masks = (item[1] for item in data)
+        probs = (item[2] for item in data)
+        mask_preds = pool.map(crf_post_process, images, probs, repeat(config))
+        yield from zip(masks, mask_preds)
 
 if __name__ == '__main__':
+    tf.logging.set_verbosity(tf.logging.INFO)
     FLAGS = parser.parse_args()
     grid_search_for_crf()

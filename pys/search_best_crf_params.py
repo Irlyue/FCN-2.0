@@ -142,8 +142,12 @@ def crf_inference_config(data, config):
 
 
 def eval_cnn(data_in):
+    def _gen():
+        for image, mask, prob in data_in:
+            mask_pred = np.argmax(prob, axis=-1)
+            yield mask, mask_pred
     with tf.Graph().as_default():
-        data = tf.data.Dataset.from_generator(lambda: (yield from data_in), output_types=(tf.int64, tf.int64),
+        data = tf.data.Dataset.from_generator(_gen, output_types=(tf.int64, tf.int64),
                                               output_shapes=(tf.TensorShape([None, None]),
                                                              tf.TensorShape([None, None])))
         batch_gt, batch_pred = data.repeat(1).batch(1).make_one_shot_iterator().get_next()

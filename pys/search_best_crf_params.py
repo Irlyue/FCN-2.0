@@ -140,6 +140,28 @@ def crf_inference_config(data, config):
         mask_preds = pool.map(crf_post_process, images, probs, repeat(config))
         yield from zip(masks, mask_preds)
 
+
+def eval_cnn(data_in):
+    with tf.Graph().as_default():
+        data = tf.data.Dataset.from_generator(lambda: (yield from data_in), output_types=(tf.int64, tf.int64),
+                                              output_shapes=(tf.TensorShape([None, None]),
+                                                             tf.TensorShape([None, None])))
+        batch_gt, batch_pred = data.repeat(1).batch(1).make_one_shot_iterator().get_next()
+        mIoU, update_op = mu.mean_iou(labels=batch_gt,
+                                      predictions=batch_pred,
+                                      num_classes=21)
+        with tf.Session(config=tf.ConfigProto(device_count={'GPU': 0})) as sess:
+            sess.run(tf.local_variables_initializer())
+            while True:
+                try:
+                    sess.run(update_op)
+                except tf.errors.OutOfRangeError:
+                    logger.info('Done!')
+                    break
+            miou = sess.run(mIoU)
+    return miou
+
+
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)
     FLAGS = parser.parse_args()

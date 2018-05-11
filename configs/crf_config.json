@@ -1,0 +1,13 @@
+{
+  "unary": "prob",
+  "n_steps": 5,
+  "bilateral": {
+    "sxy": 50,
+    "srgb": 3,
+    "compat": 5
+  },
+  "gaussian": {
+    "sxy": 3,
+    "compat": 3
+  }
+}

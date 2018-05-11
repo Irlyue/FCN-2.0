@@ -47,6 +47,13 @@ class Experiment:
         logger.info('Done in %.fs', timer.eclipsed)
         logger.info('\n%s%s%s\n', '*'*10, result, '*'*10)
 
+    def predict(self, ckpt_path=None, input_fn=None):
+        config = self.config
+        ckpt_path = ckpt_path or mu.path_join(config.model_dir, 'model.ckpt-best')
+        input_fn = input_fn or self.get_input_fn()
+        hooks = [RestoreMovingAverageHook(ckpt_path=ckpt_path)]
+        self.estimator.predict(input_fn, checkpoint_path=ckpt_path, hooks=hooks)
+
     @property
     def estimator(self):
         if self.__estimator is None:

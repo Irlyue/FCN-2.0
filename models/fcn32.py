@@ -27,7 +27,8 @@ class ResNetFCN32(FCN):
             if self.predict_mode():
                 predictions = {
                     'output': endpoints['output'],
-                    'up_output': endpoints['up_output']
+                    'up_output': endpoints['up_output'],
+                    'up_probs': endpoints['up_probs']
                 }
                 return tf.estimator.EstimatorSpec(mode, predictions=predictions)
 
@@ -102,7 +103,8 @@ class ResNetFCN32(FCN):
 
         up_logits = tf.image.resize_bilinear(logits, params.image_size)
         up_output = tf.argmax(up_logits, axis=-1, name='up_output')
-        endpoints.update(output=output, up_output=up_output, logits=logits, up_logits=up_logits)
+        up_probs = tf.nn.softmax(up_logits, axis=-1, name='up_probs')
+        endpoints.update(output=output, up_output=up_output, logits=logits, up_logits=up_logits, up_probs=up_probs)
         return up_logits, endpoints, backbone_hooks
 
 

@@ -10,6 +10,7 @@ from tqdm import tqdm
 parser = argparse.ArgumentParser()
 parser.add_argument('--year', default='2012', type=str)
 parser.add_argument('--image_set', default='train', type=str)
+parser.add_argument('--cls_image_dir', default='SegmentationClass', type=str)
 parser.add_argument('--out_dir', default='/tmp', type=str)
 parser.add_argument('--output_name', default=None, type=str,
                     help='If not provided, `voc[year]_seg_[image_set].tfrecord` will be used')
@@ -39,15 +40,9 @@ def write_to_tfrecord(pairs, filename):
 
 
 def generate_file_pairs(meta, image_set):
-    if image_set == 'trainaug':
-        val_ids = voc.load_one_image_set(meta, 'val', task='Segmentation')
-        trainval_ids = [item.split('.')[0] for item in os.listdir(os.path.join(meta.base_dir, 'SegmentationClassAug'))]
-        trainaug_ids = list(set(trainval_ids) - set(val_ids))
-        cls_img_path = os.path.join(meta.base_dir, 'SegmentationClassAug', '%s.png')
-        return [(meta.img_path % idx, cls_img_path % idx) for idx in trainaug_ids]
-    else:
-        ids = voc.load_one_image_set(meta, image_set, task='Segmentation')
-        return [(meta.img_path % idx, meta.cls_img_path % idx) for idx in ids]
+    cls_img_path = os.path.join(meta.base_dir, config.cls_image_dir, '%s.png')
+    ids = voc.load_one_image_set(meta, image_set, task='Segmentation')
+    return [(meta.img_path % idx, cls_img_path % idx) for idx in ids]
 
 
 def convert(image_set, out_path):

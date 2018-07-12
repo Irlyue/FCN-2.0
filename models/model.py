@@ -144,7 +144,8 @@ class SegInputFunction:
                 "height": tf.FixedLenFeature([], tf.int64),
                 "width": tf.FixedLenFeature([], tf.int64),
                 "image_raw": tf.FixedLenFeature([], tf.string),
-                "mask_raw": tf.FixedLenFeature([], tf.string)
+                "mask_raw": tf.FixedLenFeature([], tf.string),
+                "label": tf.FixedLenFeature([20], tf.int64)
             }
             parsed = tf.parse_single_example(example_proto, features)
 
@@ -154,19 +155,21 @@ class SegInputFunction:
             width = tf.cast(parsed['width'], tf.int32)
             image = tf.reshape(image, shape=(height, width, 3))
             mask = tf.reshape(mask, shape=(height, width, 1))
-            return image, mask
+            label = parsed['label']
+            return image, mask, label
 
-        def to_dtype(image, label):
+        def to_dtype(image, mask, label):
             image = tf.cast(image, tf.float32)
+            mask = tf.cast(mask, tf.int32)
             label = tf.cast(label, tf.int32)
-            return image, label
+            return image, mask, label
 
         with tf.device('/CPU:0'):
             data = tf.data.TFRecordDataset([self.tfrecord_path])
             data = data.map(_parse_function)
             data = data.map(to_dtype)
             if self.prep_fn:
-                data = data.map(lambda image, label: self.prep_fn(image, label, training=self.training))
+                data = data.map(lambda image, mask, label: (*self.prep_fn(image, mask, training=self.training), label))
 
             if self.training:
                 data = data.shuffle(100)
@@ -174,8 +177,11 @@ class SegInputFunction:
             data = data.repeat(self.n_epochs)
             data = data.batch(self.batch_size)
             data = data.prefetch(self.batch_size * 8)
-            batch_x, batch_y = data.make_one_shot_iterator().get_next()
-            return batch_x, batch_y
+            batch_x, batch_y, batch_z = data.make_one_shot_iterator().get_next()
+            return batch_x, {
+                'mask': batch_y,
+                'label': batch_z
+            }
 
 
 class ResNetBackboneNetwork:

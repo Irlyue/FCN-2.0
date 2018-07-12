@@ -21,19 +21,23 @@ def write_to_tfrecord(pairs, filename):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
     def _int64_feature(value):
-        return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+        value = value if type(value) is list else [value]
+        return tf.train.Feature(int64_list=tf.train.Int64List(value=value))
 
     with tf.python_io.TFRecordWriter(filename) as writer:
         for img_path, ann_path in tqdm(pairs):
             img = np.array(Image.open(img_path), dtype=np.uint8)
             ann = np.array(Image.open(ann_path), dtype=np.uint8)
+            label = voc.mask_to_one_hot(ann).astype(np.int64).tolist()
 
             height, width = img.shape[:2]
             features = tf.train.Features(feature={
                 'height': _int64_feature(height),
                 'width': _int64_feature(width),
                 'image_raw': _bytes_feature(img.tostring()),
-                'mask_raw': _bytes_feature(ann.tostring())
+                'mask_raw': _bytes_feature(ann.tostring()),
+                'label': _int64_feature(label)
+
             })
             example = tf.train.Example(features=features)
             writer.write(example.SerializeToString())

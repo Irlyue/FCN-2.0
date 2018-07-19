@@ -1,15 +1,15 @@
 {
   "tf_random_seed": 0,
-  "save_summary_steps": 100,
+  "save_summary_steps": 50,
   "save_checkpoints_steps": 500,
   "session_config": {
     "allow_soft_placement": true,
-    "log_device_placement": true,
+    "log_device_placement": false,
     "gpu_options": {
       "allow_growth": true
     }
   },
-  "keep_checkpoint_max": 5,
+  "keep_checkpoint_max": 10,
   "keep_checkpoint_every_n_hours": 10000,
-  "log_step_count_steps": 100
+  "log_step_count_steps": 1000
 }

@@ -1,3 +1,4 @@
+import time
 import argparse
 import my_utils as mu
 import tensorflow as tf
@@ -21,8 +22,11 @@ parser.add_argument('--n_workers', default=4, type=int)
 def crf_config_gen():
     config_default = mu.load_json_config('configs/crf_config.json')
     # bilateral
-    compats = range(3, 10)
-    sxys = range(50, 150, 10)
+    # compats = range(4, 5)
+    # sxys = range(120, 130, 10)
+    # srgbs = range(5, 6)
+    compats = range(3, 15)
+    sxys = range(30, 150, 5)
     srgbs = range(3, 10)
     for compat, sxy, srgb in ((x, y, z) for x in compats for y in sxys for z in srgbs):
         new_params = {
@@ -39,6 +43,8 @@ def crf_config_gen():
 
 def grid_search_for_crf():
     data = generate_pairs(FLAGS.data, FLAGS.n_examples)
+    print('Done genreration!')
+    time.sleep(10)
     best = {'mIoU': -1}
     for mIoU, config in map(eval_crf_config, repeat(data), crf_config_gen()):
         if mIoU > best['mIoU']:
@@ -53,13 +59,13 @@ def generate_pairs(tfrecord_path, n_examples):
     args = parser.parse_args('').__dict__.copy()
     args.update(image_size=(384, 384), aspp_rates=[12], keep_prob=1.0,
                 backbone_stride=8, kernel_size=3, data=tfrecord_path,
-                gpu_id=0)
+                gpu_id=0, model_dir='/tmp/fcn-3')
     config = mu.Config(args)
     exp = Experiment(config, training=False)
     results = []
     meta = voc.load_meta_data('2012')
     ids = voc.load_one_image_set(meta, 'val', task='Segmentation')
-    for idx, ends in tqdm(zip(ids[:n_examples], exp.predict()), total=n_examples):
+    for idx, ends in tqdm(zip(ids[:n_examples], exp.predict())):
         image = iu.read_image(meta.img_path % idx)
         mask = iu.read_mask(meta.cls_img_path % idx)
         probs = ends['up_probs']
@@ -73,7 +79,10 @@ def eval_crf_config(data, config):
         images = (item[0] for item in data)
         masks = (item[1] for item in data)
         probs = (item[2] for item in data)
-        gen = zip((item[1] for item in data), pool.map(crf_post_process, images, masks, probs))
+        # for image, mask, prob in data:
+            # mask_pred = prob.argmax(axis=-1)
+            # metric(mask, mask_pred)
+        gen = zip(masks, pool.map(crf_post_process, images, probs, repeat(config)))
         for mask, mask_pred in tqdm(gen, total=FLAGS.n_examples):
             metric(mask, mask_pred)
     return metric.result, config

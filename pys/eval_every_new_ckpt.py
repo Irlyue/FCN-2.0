@@ -6,10 +6,8 @@ import tensorflow as tf
 from experiment import Experiment
 from models.tf_hooks import EvalBestHook
 
-parser = mu.get_default_parser()
 logger = mu.get_default_logger()
-
-IGNORE_FIRST_CKPT = True
+SKIP_FIRST_N = 3
 
 
 def generate_new_ckpt(model_dir, n_loops=None, wait_secs=60):
@@ -38,7 +36,7 @@ def main():
 
     EvalBestHook.on_start()
     for i, ckpt in enumerate(generate_new_ckpt(config.model_dir, wait_secs=300)):
-        if i == 0 and IGNORE_FIRST_CKPT:
+        if i < SKIP_FIRST_N:
             continue
         experiment.eval(ckpt)
 

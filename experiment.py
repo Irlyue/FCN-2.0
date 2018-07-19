@@ -29,8 +29,8 @@ class Experiment:
             return reshape_and_prep(image, label, training, config.image_size)
         config = self.config
         if config.data.endswith('.json'):
-            ann_file = config.json
-            image_dir = '/'.join(ann_file[:-2] + ['images'])
+            ann_file = config.data
+            image_dir = '/'.join(ann_file.split('/')[:-2] + ['images'])
             cw = cocoutils.load_coco(ann_file, image_dir)
             input_fn = COCOSegInputFunction(cw, self.training, batch_size=config.batch_size,
                                             n_epochs=config.n_epochs, prep_fn=image_prep_fn)

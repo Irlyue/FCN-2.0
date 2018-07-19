@@ -1,11 +1,11 @@
 import my_utils as mu
 import tensorflow as tf
 
-from models.model import ResNetBackboneNetwork, InputFunction, VGGBackboneNetwork, SegInputFunction
-from inputs.data_gen import data_gen
-from preprocessing.prep import default_prep, default_seg_prep
-from models.fcn32 import ResNetFCN32, VGGFCN32
+from models.model import ResNetBackboneNetwork, SegInputFunction, COCOSegInputFunction
+from preprocessing.prep import default_seg_prep
+from models.fcn32 import ResNetFCN32
 from models.tf_hooks import RestoreMovingAverageHook
+from inputs import cocoutils
 
 logger = mu.get_default_logger()
 
@@ -25,11 +25,19 @@ class Experiment:
         self.__estimator = None
 
     def get_input_fn(self):
+        def image_prep_fn(image, label, training):
+            return reshape_and_prep(image, label, training, config.image_size)
         config = self.config
-        image_prep_fn = lambda image, label, training: reshape_and_prep(image, label, training, config.image_size)
-        input_fn = SegInputFunction(config.data, self.training, batch_size=config.batch_size,
-                                    n_epochs=config.n_epochs,
-                                    prep_fn=image_prep_fn)
+        if config.data.endswith('.json'):
+            ann_file = config.json
+            image_dir = '/'.join(ann_file[:-2] + ['images'])
+            cw = cocoutils.load_coco(ann_file, image_dir)
+            input_fn = COCOSegInputFunction(cw, self.training, batch_size=config.batch_size,
+                                            n_epochs=config.n_epochs, prep_fn=image_prep_fn)
+        else:
+            input_fn = SegInputFunction(config.data, self.training, batch_size=config.batch_size,
+                                        n_epochs=config.n_epochs,
+                                        prep_fn=image_prep_fn)
         return input_fn
 
     def train(self, input_fn=None):

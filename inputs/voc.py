@@ -175,10 +175,9 @@ def load_one_objectness_image(meta, idx, to_prob=True):
     return image
 
 
-
-def one_hot_to_class_names(idx_to_name, one_hot):
+def one_hot_to_class_names(one_hot):
     indices = list(np.nonzero(one_hot)[0])
-    return [idx_to_name[idx] for idx in indices]
+    return [VOCMeta.idx_to_name[idx] for idx in indices]
 
 
 def mask_to_one_hot(mask):

@@ -184,6 +184,37 @@ class SegInputFunction:
             }
 
 
+class COCOSegInputFunction:
+    def __init__(self, cw, training, batch_size=1, prep_fn=None, n_epochs=1):
+        self.cw = cw
+        self.training = training
+        self.batch_size = batch_size
+        self.prep_fn = prep_fn
+        self.n_epochs = n_epochs
+
+    def __call__(self, *args, **kwargs):
+        with tf.name_scope('InputFunction'):
+            output_types = (tf.float32, {'mask': tf.int64, 'label': tf.int64})
+            output_shapes = (tf.TensorShape((None, None, 3)),
+                             {'mask': tf.TensorShape((None, None)), 'label': tf.TensorShape((80,))})
+            data = tf.data.Dataset.from_generator(lambda: iter(self.cw),
+                                                  output_types=output_types,
+                                                  output_shapes=output_shapes)
+            data = data.map(lambda image, labels: (image, labels['mask'][..., None], labels['label']))
+            if self.prep_fn:
+                data = data.map(lambda image, mask, label: (*self.prep_fn(image, mask, training=self.training), label))
+            if self.training:
+                data = data.shuffle(100)
+            data = data.repeat(self.n_epochs)
+            data = data.batch(self.batch_size)
+            data = data.prefetch(self.batch_size * 8)
+            batch_x, batch_y, batch_z = data.make_one_shot_iterator().get_next()
+            return batch_x, {
+                'mask': batch_y,
+                'label': batch_z
+            }
+
+
 class ResNetBackboneNetwork:
     def __init__(self, name='resnet_v1_101', reg=1e-4, ckpt_path=None, output_stride=16):
         self.name = name

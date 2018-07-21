@@ -28,9 +28,9 @@ class MetricMIOU:
 
 def load_config():
     parser = get_default_parser()
-    args = parser.parse_args()
-    args['crf_config'] = load_json_config('configs/crf_json.json')
-    config = Config(args.__dict__.copy())
+    args = parser.parse_args().__dict__.copy()
+    args['crf_config'] = load_json_config('configs/crf_config.json')
+    config = Config(args)
     return config
 
 

@@ -3,6 +3,8 @@ import numpy as np
 from pydensecrf.densecrf import DenseCRF2D
 from pydensecrf.utils import unary_from_softmax
 
+min_prob = 0.0001
+
 
 def crf_post_process(image, probs, config, return_prob=False):
     """
@@ -31,12 +33,17 @@ def crf_post_process(image, probs, config, return_prob=False):
     # inference
     Q = d.inference(config['n_steps'])
     # result = np.argmax(Q, axis=0).reshape((height, width))
-    result = np.array(Q).reshape((height, width, n_classes))
+    result = np.array(Q).reshape((n_classes, height, width))
+    result = np.transpose(result, (1, 2, 0))
     result = result if return_prob else result.argmax(axis=-1)
     return result
 
 
 def gen_crf_prob(imgs, probs, config, dtype='float32'):
+    imgs = imgs + np.array([123.68, 116.78, 103.94])
+    imgs = imgs.astype('uint8')
     result = np.stack((crf_post_process(img, prob, config, True) for img, prob in zip(imgs, probs)), axis=0)
+    result[result < min_prob] = min_prob
+    result /= np.sum(result, axis=-1, keepdims=True)
     result = result.astype(dtype)
     return result

@@ -43,10 +43,10 @@ class ResNetCrfFCN32(FCN):
                                                         logits=endpoints['logits'])
             # crf_loss
             resized_images = tf.image.resize_bilinear(features, size=(fcn_output_size, fcn_output_size))
-            fcn_prob = endpoints['probs']
-            crf_prob = tf.map_fn(lambda imgs, probs: crf.gen_crf_prob(imgs, probs, params.crf_config),
-                                 (resized_images, fcn_prob),
-                                 dtype=tf.float32)
+            fcn_prob = endpoints['probs'] + crf.min_prob
+            fcn_prob = fcn_prob / tf.reduce_sum(fcn_prob, axis=-1, keepdims=True)
+            crf_prob = tf.py_func(lambda imgs, probs: crf.gen_crf_prob(imgs, probs, params.crf_config),
+                                 (resized_images, fcn_prob), tf.float32)
             crf_loss = tf.reduce_mean(crf_prob * tf.log(crf_prob / fcn_prob), name='crf_loss')
             loss = tf.add_n([reg_loss, data_loss, crf_loss], name='total_loss')
             ##############################
@@ -72,6 +72,7 @@ class ResNetCrfFCN32(FCN):
                 ##############################
                 tf.summary.scalar('loss/data_loss', data_loss)
                 tf.summary.scalar('loss/reg_loss', reg_loss)
+                tf.summary.scalar('loss/crf_loss', crf_loss)
                 tf.summary.scalar('lr', params.lr)
                 tf.summary.scalar('metrics/accuracy', accuracy[1])
                 # tf.summary.scalar('metrics/mIoU', mIoU[1])

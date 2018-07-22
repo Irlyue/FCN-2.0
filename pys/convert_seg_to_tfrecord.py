@@ -26,17 +26,18 @@ def write_to_tfrecord(pairs, filename):
 
     with tf.python_io.TFRecordWriter(filename) as writer:
         for img_path, ann_path in tqdm(pairs):
-            img = np.array(Image.open(img_path), dtype=np.uint8)
+            img = open(img_path, 'rb').read()
             ann = np.array(Image.open(ann_path), dtype=np.uint8)
-            label = voc.mask_to_one_hot(ann).astype(np.int64).tolist()
+            height, width = ann.shape[:2]
+            label = voc.mask_to_one_hot(ann).astype(np.uint8)
+            ann = open(ann_path, 'rb').read()
 
-            height, width = img.shape[:2]
             features = tf.train.Features(feature={
                 'height': _int64_feature(height),
                 'width': _int64_feature(width),
-                'image_raw': _bytes_feature(img.tostring()),
-                'mask_raw': _bytes_feature(ann.tostring()),
-                'label': _int64_feature(label)
+                'image_raw': _bytes_feature(img),
+                'mask_raw': _bytes_feature(ann),
+                'label': _bytes_feature(label.tostring())
 
             })
             example = tf.train.Example(features=features)

@@ -1,3 +1,4 @@
+import io
 import numpy as np
 
 from matplotlib.colors import LinearSegmentedColormap
@@ -113,3 +114,8 @@ def save_image(image, path):
     if type(image) is np.ndarray:
         image = Image.fromarray(image)
     image.save(path)
+
+
+def decode_raw_png_bytes(contents):
+    result = np.array(Image.open(io.BytesIO(contents)))
+    return result

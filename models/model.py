@@ -1,5 +1,6 @@
 import my_utils as mu
 import tensorflow as tf
+import utils.image_utils as iu
 import tensorflow.contrib.slim as slim
 
 from .optimizer import OptimizerWrapper
@@ -145,17 +146,15 @@ class SegInputFunction:
                 "width": tf.FixedLenFeature([], tf.int64),
                 "image_raw": tf.FixedLenFeature([], tf.string),
                 "mask_raw": tf.FixedLenFeature([], tf.string),
-                "label": tf.FixedLenFeature([20], tf.int64)
+                "label": tf.FixedLenFeature([], tf.string)
             }
             parsed = tf.parse_single_example(example_proto, features)
-
-            image = tf.decode_raw(parsed['image_raw'], tf.uint8)
-            mask = tf.decode_raw(parsed['mask_raw'], tf.uint8)
-            height = tf.cast(parsed['height'], tf.int32)
-            width = tf.cast(parsed['width'], tf.int32)
+            height, width = tf.cast(parsed['height'], tf.int32), tf.cast(parsed['width'], tf.int32)
+            image = tf.image.decode_jpeg(parsed['image_raw'], channels=3)
             image = tf.reshape(image, shape=(height, width, 3))
+            mask = tf.py_func(iu.decode_raw_png_bytes, (parsed['mask_raw'],), tf.uint8)
             mask = tf.reshape(mask, shape=(height, width, 1))
-            label = parsed['label']
+            label = tf.decode_raw(parsed['label'], tf.uint8)
             return image, mask, label
 
         def to_dtype(image, mask, label):

@@ -1,9 +1,11 @@
 from sklearn.metrics import confusion_matrix
+from skimage import measure
 from utils.tf_utils import *
 from utils.os_utils import *
 
 from configs.configuration import Config
 from configs.arguments import get_default_parser
+from collections import deque, defaultdict
 
 
 class MetricMIOU:
@@ -43,3 +45,54 @@ def load_run_config(path=None):
 
     run_config = tf.estimator.RunConfig(**config)
     return run_config
+
+
+def fill_bg_with_fg(prediction):
+    """
+    1. get the connected components labeled as background;
+    2. test each connected components following:
+        -. If component is strictly surrounded(can't be the image edge) by one other class, labeled
+        it as that class;
+        -. Otherwise, do nothing
+
+    :param prediction:
+    :return:
+    """
+    prediction = prediction.copy()
+    neighbor, visited = calc_bg_neighbors(prediction)
+    for idx, classes in neighbor:
+        if len(classes) == 1:
+            prediction[visited == idx] = classes[0]
+
+
+def calc_bg_neighbors(prediction):
+    def inrange(posi, posj):
+        return (0 <= posi < height) and (0 <= posj < width)
+
+    def visit_from(posi, posj):
+        nonlocal counter
+        q = deque()
+        counter += 1
+        q.append((posi, posj))
+        visited[posi, posj] = counter
+        while len(q) != 0:
+            topi, topj = q.popleft()
+            for dx, dy in zip([1, 0, -1, 0], [0, 1, 0, -1]):
+                nexti, nextj = topi + dx, topj + dy
+                if inrange(nexti, nextj):
+                    if prediction[nexti, nextj] == 0 and visited[nexti, nextj] == 0:
+                        q.append((nexti, nextj))
+                        visited[nexti, nextj] = counter
+                    if prediction[nexti, nextj] != 0:
+                        neighbor[counter].add(prediction[nexti, nextj])
+                else:
+                    neighbor[counter].add(-1)
+    neighbor = defaultdict(set)
+    counter = 0
+    height, width = prediction.shape
+    visited = np.zeros((height, width), dtype=np.uint8)
+    for i, j in ((i, j) for i in range(height) for j in range(width)):
+        if visited[i, j] == 0 and prediction[i, j] == 0:
+            visit_from(i, j)
+            print(i, j)
+    return neighbor, visited

@@ -60,9 +60,10 @@ def fill_bg_with_fg(prediction):
     """
     prediction = prediction.copy()
     neighbor, visited = calc_bg_neighbors(prediction)
-    for idx, classes in neighbor:
+    for idx, classes in neighbor.items():
         if len(classes) == 1:
-            prediction[visited == idx] = classes[0]
+            prediction[visited == idx] = list(classes)[0]
+    return prediction
 
 
 def calc_bg_neighbors(prediction):
@@ -94,5 +95,4 @@ def calc_bg_neighbors(prediction):
     for i, j in ((i, j) for i in range(height) for j in range(width)):
         if visited[i, j] == 0 and prediction[i, j] == 0:
             visit_from(i, j)
-            print(i, j)
     return neighbor, visited

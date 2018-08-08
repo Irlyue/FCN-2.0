@@ -67,20 +67,53 @@ def fill_bg_with_fg(prediction):
 
 
 def calc_bg_neighbors(prediction):
-    def inrange(posi, posj):
+    """
+    Calculate how many neighbors are there for each connected background area. Each connected will be
+    labeled with different integer(see the return values for details).
+
+    Examples
+    --------
+    >>> a = (np.array([
+    ...   [0, 0, 0, 0, 0],
+    ...   [0, 1, 1, 1, 0],
+    ...   [0, 1, 0, 1, 0],
+    ...   [0, 1, 1, 1, 0],
+    ...   [0, 0, 0, 0, 0]]))
+    >>> neighbor, visited = calc_bg_neighbors(a)
+    >>> neighbor
+    defaultdict(<class 'set'>, {1: {1, -1}, 2: {1}})
+    >>> print(visited)
+    [[1 1 1 1 1]
+     [1 0 0 0 1]
+     [1 0 2 0 1]
+     [1 0 0 0 1]
+     [1 1 1 1 1]]
+
+    :param prediction:
+    :return:
+        neighbor: dict, integer->set of neighboring classes, image edge is also considered as one class
+    and is recognized as -1.
+        visited: np.array, same shape as `prediction`, given the connected components.
+    """
+    def in_range(posi, posj):
         return (0 <= posi < height) and (0 <= posj < width)
 
     def visit_from(posi, posj):
+        tic = time.time()
         nonlocal counter
         q = deque()
         counter += 1
         q.append((posi, posj))
         visited[posi, posj] = counter
         while len(q) != 0:
+            if time.time() - tic > 1:
+                neighbor[counter].add(-1)
+                neighbor[counter].add(1)
+                break
             topi, topj = q.popleft()
             for dx, dy in zip([1, 0, -1, 0], [0, 1, 0, -1]):
                 nexti, nextj = topi + dx, topj + dy
-                if inrange(nexti, nextj):
+                if in_range(nexti, nextj):
                     if prediction[nexti, nextj] == 0 and visited[nexti, nextj] == 0:
                         q.append((nexti, nextj))
                         visited[nexti, nextj] = counter

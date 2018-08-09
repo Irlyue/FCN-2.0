@@ -131,6 +131,45 @@ class InputFunction:
             return batch_x, batch_y
 
 
+class VOCInputFunction:
+    def __init__(self, ids, image_dir, mask_dir, **kwargs):
+        self.ids = ids
+        self.image_dir = image_dir
+        self.mask_dir = mask_dir
+        wanted = ['prep_fn', 'batch_size', 'training', 'n_epochs']
+        assert all(key in kwargs for key in wanted), "Should include: %s" % wanted
+        self.__dict__.update(kwargs)
+
+    def __call__(self):
+        def _gen():
+            _image_path_fmt = mu.path_join(self.image_dir, '%s.jpg')
+            _mask_path_fmt = mu.path_join(self.mask_dir, '%s.png')
+            for _idx in self.ids:
+                _image = iu.read_image(_image_path_fmt % _idx)
+                _label = iu.read_mask(_mask_path_fmt % _idx, 'uint8')
+                yield _image, _label
+
+        with tf.name_scope('InputFunction'):
+            output_types = (tf.uint8, tf.uint8)
+            output_shapes = (tf.TensorShape((None, None, 3)), tf.TensorShape((None, None)))
+            data = tf.data.Dataset.from_generator(_gen, output_types=output_types, output_shapes=output_shapes)
+            data = data.map(lambda _x, _y: (_x, _y[..., None]))
+            if self.prep_fn:
+                data = data.map(lambda _image, _mask: self.prep_fn(_image, _mask, training=self.training),
+                                num_parallel_calls=self.batch_size)
+
+            if self.training:
+                data = data.shuffle(100)
+
+            data = data.repeat(self.n_epochs)
+            data = data.batch(self.batch_size)
+            data = data.prefetch(self.batch_size * 8)
+            batch_x, batch_y = data.make_one_shot_iterator().get_next()
+            return batch_x, {
+                'mask': batch_y,
+            }
+
+
 class SegInputFunction:
     def __init__(self, tfrecord_path, training, batch_size=1, prep_fn=None, n_epochs=1):
         self.tfrecord_path = tfrecord_path

@@ -99,14 +99,15 @@ def calc_bg_neighbors(prediction):
         return (0 <= posi < height) and (0 <= posj < width)
 
     def visit_from(posi, posj):
-        tic = time.time()
+        tic = time()
         nonlocal counter
         q = deque()
         counter += 1
         q.append((posi, posj))
         visited[posi, posj] = counter
         while len(q) != 0:
-            if time.time() - tic > 1:
+            if time() - tic > 5:
+                print('<<ERROR>> More than 5 seconds without result')
                 neighbor[counter].add(-1)
                 neighbor[counter].add(1)
                 break

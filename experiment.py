@@ -3,7 +3,7 @@ import tensorflow as tf
 
 from models.model import ResNetBackboneNetwork, SegInputFunction, COCOSegInputFunction
 from preprocessing.prep import default_seg_prep
-from models.fcn32 import ResNetFCN32
+from models.fcn32 import ResNetFCN32, ResNetCrfFCN32
 from models.tf_hooks import RestoreMovingAverageHook
 from inputs import cocoutils
 
@@ -60,7 +60,7 @@ class Experiment:
         ckpt_path = ckpt_path or mu.path_join(config.model_dir, 'model.ckpt-best')
         input_fn = input_fn or self.get_input_fn()
         hooks = [RestoreMovingAverageHook(ckpt_path=ckpt_path)]
-        self.estimator.predict(input_fn, checkpoint_path=ckpt_path, hooks=hooks)
+        return self.estimator.predict(input_fn, checkpoint_path=ckpt_path, hooks=hooks)
 
     @property
     def estimator(self):
@@ -72,7 +72,7 @@ class Experiment:
                                              reg=config.reg,
                                              ckpt_path=config.ckpt_for_backbone,
                                              output_stride=config.backbone_stride)
-            fcn_fn = ResNetFCN32(backbone)
+            fcn_fn = ResNetCrfFCN32(backbone)
             run_config = mu.load_run_config()
             self.__estimator = tf.estimator.Estimator(fcn_fn, model_dir=config.model_dir, params=config, config=run_config)
         return self.__estimator

@@ -1,11 +1,11 @@
 import my_utils as mu
 import tensorflow as tf
 
-from models.model import ResNetBackboneNetwork, SegInputFunction, COCOSegInputFunction
+from models.model import ResNetBackboneNetwork, SegInputFunction, COCOSegInputFunction, VOCInputFunction
 from preprocessing.prep import default_seg_prep
 from models.fcn32 import ResNetFCN32, ResNetCrfFCN32
 from models.tf_hooks import RestoreMovingAverageHook
-from inputs import cocoutils
+from inputs import cocoutils, voc
 
 logger = mu.get_default_logger()
 
@@ -34,8 +34,18 @@ class Experiment:
             cw = cocoutils.load_coco(ann_file, image_dir)
             input_fn = COCOSegInputFunction(cw, self.training, batch_size=config.batch_size,
                                             n_epochs=config.n_epochs, prep_fn=image_prep_fn)
-        else:
+        elif config.data.endswith('.tfrecord'):
             input_fn = SegInputFunction(config.data, self.training, batch_size=config.batch_size,
+                                        n_epochs=config.n_epochs,
+                                        prep_fn=image_prep_fn)
+        else:
+            # trainaug-/tmp/images-/tmp/masks
+            meta = voc.load_meta_data('2012')
+            image_split, image_dir, mask_dir = config.data.split('-')
+            ids = voc.load_one_image_set(meta, image_split)
+            input_fn = VOCInputFunction(ids, image_dir, mask_dir,
+                                        training=self.training,
+                                        batch_size=config.batch_size,
                                         n_epochs=config.n_epochs,
                                         prep_fn=image_prep_fn)
         return input_fn

@@ -1,3 +1,6 @@
+import itertools
+
+from time import sleep
 from sklearn.metrics import confusion_matrix
 from skimage import measure
 from utils.tf_utils import *
@@ -130,3 +133,49 @@ def calc_bg_neighbors(prediction):
         if visited[i, j] == 0 and prediction[i, j] == 0:
             visit_from(i, j)
     return neighbor, visited
+
+
+def generate_new_ckpt(model_dir, n_loops=None, wait_secs=60):
+    old_ckpts = set()
+    n_loops = n_loops or int(1e8)
+    for _ in itertools.repeat(None, times=n_loops):
+        ckpt_state = tf.train.get_checkpoint_state(model_dir)
+        all_ckpts = set(ckpt_state.all_model_checkpoint_paths) if ckpt_state else set()
+        new_ckpts = all_ckpts - old_ckpts
+        if len(new_ckpts) == 0:
+            print('Wait for %d seconds' % wait_secs)
+            try:
+                sleep(wait_secs)
+            except KeyboardInterrupt:
+                ans = input('Sure you wanna exit?(y|n)')
+                if ans.startswith('y'):
+                    break
+        else:
+            yield from sorted(new_ckpts, key=lambda x: int(x.split('-')[-1]))
+            old_ckpts = all_ckpts
+
+
+def batch_output(gen, batch_size):
+    """
+    Examples
+    --------
+    >>> list(batch_output(range(5), 2))
+    [[0, 1], [2, 3], [4]]
+    >>> list(batch_output(range(6), 3))
+    [[0, 1, 2], [3, 4, 5]]
+
+    :param gen:
+    :param batch_size:
+    :return:
+    """
+    batch_list = []
+    counter = 0
+    for item in gen:
+        batch_list.append(item)
+        counter += 1
+        if counter == batch_size:
+            yield batch_list
+            counter = 0
+            batch_list = []
+    if batch_list:
+        yield batch_list

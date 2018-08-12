@@ -1,7 +1,7 @@
 import numpy as np
 
 from pydensecrf.densecrf import DenseCRF2D
-from pydensecrf.utils import unary_from_softmax
+from pydensecrf.utils import unary_from_softmax, unary_from_labels
 
 min_prob = 0.0001
 
@@ -22,8 +22,12 @@ def crf_post_process(image, probs, config, return_prob=False):
     d = DenseCRF2D(width, height, n_classes)
 
     # unary potential
-    assert config['unary'] == 'prob', '<<ERROR>>Only unary potential from probability is supported!'
-    unary = unary_from_softmax(probs.transpose((2, 0, 1)))
+    assert config['unary'] in ['prob', 'label'], '<<ERROR>>Only unary potential from probability is supported!'
+    if config['unary'] == 'prob':
+        unary = unary_from_softmax(probs.transpose((2, 0, 1)))
+    elif config['unary'] == 'label':
+        label = np.argmax(probs, axis=-1)
+        unary = unary_from_labels(label, n_labels=probs.shape[-1], gt_prob=config['gt_prob'], zero_unsure=False)
     d.setUnaryEnergy(unary)
 
     # pairwise potential

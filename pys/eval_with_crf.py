@@ -51,7 +51,7 @@ def generate_pairs(tfrecord_path):
     with Resizer() as resizer:
         for i, (inps, ends) in enumerate(zip(input_batch(), exp.predict())):
             image = inps[0].astype('uint8')[0]
-            mask = np.squeeze(inps[1][0]).astype('int64')
+            mask = np.squeeze(inps[1]['mask']).astype('int64')
             probs = ends['up_probs']
             probs = resizer(probs, mask.shape)
             yield image, mask, probs
@@ -60,6 +60,12 @@ def generate_pairs(tfrecord_path):
 def crf_inference_one(item, config):
     image, mask, prob = item
     mask_pred = crf_post_process(image, prob, config)
+    return mask, mask_pred
+
+
+def crf_and_fill(item, config):
+    mask, mask_pred = crf_inference_one(item, config)
+    mask_pred = mu.fill_bg_with_fg(mask_pred)
     return mask, mask_pred
 
 
@@ -99,6 +105,7 @@ def eval_crf(config):
                 for mask, mask_pred in executor.map(eval_func, batches, repeat(config)):
                     metric(mask, mask_pred)
         except Exception as e:
+            print('************************')
             print(e)
             pass
     show_class_iou(metric, timer)
@@ -110,9 +117,9 @@ def main():
         # 'unary': 'prob',
         # 'n_steps': 5,
         # 'bilateral': {
-            # 'compat': 9,
-            # 'sxy': 120,
-            # 'srgb': 4
+            # 'compat': 6,
+            # 'sxy': 100,
+            # 'srgb': 6 
         # },
         # 'gaussian': {
             # 'sxy': 3,
@@ -123,8 +130,8 @@ def main():
         'unary': 'prob',
         'n_steps': 5,
         'bilateral': {
-            'compat': 4,
-            'sxy': 121,
+            'compat': 7,
+            'sxy': 35,
             'srgb': 5
         },
         'gaussian': {
